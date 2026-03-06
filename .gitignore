@@ -47,3 +47,4 @@ app.*.map.json
 # Extras
 workspace/references/repos
 .env
+credentials
