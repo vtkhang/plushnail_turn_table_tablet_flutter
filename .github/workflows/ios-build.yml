@@ -36,8 +36,8 @@ jobs:
           security unlock-keychain -p "" build.keychain
           
           # Decode certificate and provisioning profile
-          echo $P12_BASE64 | base64 --decode > release.p12
-          echo $PROVISION_BASE64 | base64 --decode > release.mobileprovision
+          echo $P12_BASE64 | tr -d '\n ' | base64 --decode > release.p12
+          echo $PROVISION_BASE64 | tr -d '\n ' | base64 --decode > release.mobileprovision
           
           # Import certificate and install profile
           security import release.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
