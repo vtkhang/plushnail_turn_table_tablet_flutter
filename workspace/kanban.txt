@@ -1,0 +1,2 @@
+- 202603060756: 3h
+  - config and build project
