@@ -35,12 +35,24 @@ jobs:
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
           
-          # Decode certificate and provisioning profile
-          echo $P12_BASE64 | tr -d '\n ' | base64 --decode > release.p12
-          echo $PROVISION_BASE64 | tr -d '\n ' | base64 --decode > release.mobileprovision
+          # Decode certificate and provisioning profile using printf for reliability
+          printf '%s' "$P12_BASE64" | tr -d '\n ' | base64 --decode > release.p12
+          printf '%s' "$PROVISION_BASE64" | tr -d '\n ' | base64 --decode > release.mobileprovision
+          
+          # Safe Debugging: Check file integrity without exposing secrets
+          echo "Debug: release.p12 size: $(stat -f%z release.p12) bytes"
+          echo "Debug: release.p12 MD5: $(md5 -q release.p12)"
+          echo "Debug: release.mobileprovision size: $(stat -f%z release.mobileprovision) bytes"
+          
+          # Test if OpenSSL can read the p12 with the provided password
+          if openssl pkcs12 -info -in release.p12 -passin pass:"$P12_PASSWORD" -noout; then
+            echo "Success: OpenSSL verified the p12 password."
+          else
+            echo "Error: OpenSSL could not verify the p12 password."
+          fi
           
           # Import certificate and install profile
-          security import release.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security import release.p12 -k build.keychain -P "$P12_PASSWORD" -A -T /usr/bin/codesign
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp release.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
           
