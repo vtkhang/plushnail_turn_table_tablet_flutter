@@ -44,15 +44,18 @@ jobs:
           echo "Debug: release.p12 MD5: $(md5 -q release.p12)"
           echo "Debug: release.mobileprovision size: $(stat -f%z release.mobileprovision) bytes"
           
-          # Test if OpenSSL can read the p12 with the provided password
-          if openssl pkcs12 -info -in release.p12 -passin pass:"$P12_PASSWORD" -noout; then
-            echo "Success: OpenSSL verified the p12 password."
+          # Test and Convert P12 to legacy format for macOS 'security' tool compatibility
+          if openssl pkcs12 -in release.p12 -passin pass:"$P12_PASSWORD" -nodes -out temp.pem; then
+            echo "Success: OpenSSL extracted PEM."
+            openssl pkcs12 -export -in temp.pem -out release_legacy.p12 -passout pass:"$P12_PASSWORD" -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES
+            echo "Success: Converted to legacy P12."
           else
-            echo "Error: OpenSSL could not verify the p12 password."
+            echo "Error: OpenSSL could not read the p12."
+            exit 1
           fi
           
-          # Import certificate and install profile
-          security import release.p12 -k build.keychain -P "$P12_PASSWORD" -A -T /usr/bin/codesign
+          # Import the LEGACY certificate
+          security import release_legacy.p12 -k build.keychain -P "$P12_PASSWORD" -A -T /usr/bin/codesign
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp release.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
           
